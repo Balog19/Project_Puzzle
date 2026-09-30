@@ -1,0 +1,17 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5d32a83ae7ce9d0478fc31f11219774c, type: 3}
+  m_Name: House
+  m_EditorClassIdentifier: Assembly-CSharp::BuildingData
+  displayName: Building
+  prefab: {fileID: 919132149155446097, guid: 833d6fbc01fc57242931e80612ee17a2, type: 3}
+  size: {x: 1, y: 1}

@@ -11,14 +11,20 @@ public class BuildingPlacer : MonoBehaviour
     [SerializeField] private Camera cam;
     [Tooltip("Optional parent for placed buildings, keeps the Hierarchy tidy.")]
     [SerializeField] private Transform buildingsParent;
+    [Tooltip("Pays building costs. If empty, buildings are free.")]
+    [SerializeField] private ResourceManager resources;
 
     public event Action<BuildingData> SelectionChanged;
+
+    /// <summary>Raised after a building is placed: its data, the spawned instance, and the cells it covers.</summary>
+    public event Action<BuildingData, GameObject, RectInt> BuildingPlaced;
 
     public BuildingData Selected { get; private set; }
     public bool IsPlacing => Selected != null;
 
     private GameObject _ghost;
     private RectInt? _lastArea;
+    private bool _lastValid;
     
     public void Select(BuildingData building)
     {
@@ -69,7 +75,9 @@ public class BuildingPlacer : MonoBehaviour
         }
 
         RectInt? area = GetFootprintUnderMouse(mouse.position.ReadValue());
-        bool valid = area.HasValue && grid.IsAreaAll(area.Value, GridMap.CellState.Empty);
+        bool valid = area.HasValue
+                     && grid.IsAreaAll(area.Value, GridMap.CellState.Empty)
+                     && CanAffordSelected();
 
         UpdatePreview(area, valid);
 
@@ -79,10 +87,15 @@ public class BuildingPlacer : MonoBehaviour
         }
     }
 
+    private bool CanAffordSelected() => resources == null || resources.CanAfford(Selected.Cost);
+
     private void Place(RectInt area)
     {
-        Instantiate(Selected.Prefab, grid.AreaToWorldCenter(area), _ghost.transform.rotation);
+        if (resources != null && !resources.TrySpend(Selected.Cost)) return;
+
+        GameObject instance = Instantiate(Selected.Prefab, grid.AreaToWorldCenter(area), _ghost.transform.rotation);
         grid.SetArea(area, GridMap.CellState.Occupied);
+        BuildingPlaced?.Invoke(Selected, instance, area);
         
         _lastArea = null;
     }
@@ -95,8 +108,10 @@ public class BuildingPlacer : MonoBehaviour
             if (area.HasValue) _ghost.transform.position = grid.AreaToWorldCenter(area.Value);
         }
         
-        if (area.Equals(_lastArea)) return;
+        // Only push to the shader when something changed (validity can change from resources alone).
+        if (area.Equals(_lastArea) && valid == _lastValid) return;
         _lastArea = area;
+        _lastValid = valid;
 
         if (visual == null) return;
         visual.SetHoveredCells(area.HasValue ? CellsIn(area.Value) : null);

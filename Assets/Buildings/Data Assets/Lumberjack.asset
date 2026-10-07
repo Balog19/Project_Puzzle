@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5d32a83ae7ce9d0478fc31f11219774c, type: 3}
+  m_Name: Lumberjack
+  m_EditorClassIdentifier: Assembly-CSharp::BuildingData
+  displayName: Lumberjack
+  prefab: {fileID: 919132149155446097, guid: 609e32fb82c34224389bfaf4be0683d3, type: 3}
+  size: {x: 1, y: 1}
+  housingCapacity: 0
+  cost:
+  - type: {fileID: 11400000, guid: 5589467ea08be774796d7cf53d3693a3, type: 2}
+    amount: 5
+  production:
+  - type: {fileID: 11400000, guid: 5589467ea08be774796d7cf53d3693a3, type: 2}
+    amount: 3
+  productionInterval: 5
+  consumptionPerResident: []
+  consumptionInterval: 10

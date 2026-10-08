@@ -5,9 +5,9 @@ using UnityEngine;
 /// <summary>
 /// Tracks the town's population. The total grows over time; people are homeless
 /// until placed buildings provide housing, and move in as soon as there's room.
-/// Houses fill up in the order they were placed.
+/// Houses fill up in the order they were placed. Growth is driven by the TickManager.
 /// </summary>
-public class PopulationManager : MonoBehaviour
+public class PopulationManager : MonoBehaviour, ITickable
 {
     [Tooltip("Placed buildings with housing capacity add room for people.")]
     [SerializeField] private BuildingPlacer placer;
@@ -28,7 +28,7 @@ public class PopulationManager : MonoBehaviour
     public IReadOnlyList<House> Houses => _houses;
 
     private readonly List<House> _houses = new List<House>();
-    private float _growthTimer;
+    private int _growthTicks;
 
     private void Awake()
     {
@@ -38,11 +38,13 @@ public class PopulationManager : MonoBehaviour
     private void OnEnable()
     {
         if (placer != null) placer.BuildingPlaced += OnBuildingPlaced;
+        TickManager.TryRegister(this, TickPhase.Population, this);
     }
 
     private void OnDisable()
     {
         if (placer != null) placer.BuildingPlaced -= OnBuildingPlaced;
+        TickManager.TryUnregister(this);
     }
 
     private void Start()
@@ -51,12 +53,12 @@ public class PopulationManager : MonoBehaviour
         Changed?.Invoke();
     }
 
-    private void Update()
+    public void Tick()
     {
-        _growthTimer += Time.deltaTime;
-        if (_growthTimer < growthInterval) return;
+        _growthTicks++;
+        if (_growthTicks < TickManager.Instance.SecondsToTicks(growthInterval)) return;
 
-        _growthTimer -= growthInterval;
+        _growthTicks = 0;
         Total += growthAmount;
         AssignResidents();
     }

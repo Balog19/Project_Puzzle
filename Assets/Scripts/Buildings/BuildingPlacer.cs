@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
@@ -25,6 +26,14 @@ public class BuildingPlacer : MonoBehaviour
     private GameObject _ghost;
     private RectInt? _lastArea;
     private bool _lastValid;
+    private readonly Dictionary<Vector2Int, PlacedBuilding> _buildingsByCell = new Dictionary<Vector2Int, PlacedBuilding>();
+
+    /// <summary>The placed building covering this cell, if any.</summary>
+    public bool TryGetBuildingAt(Vector2Int cell, out PlacedBuilding building)
+    {
+        // Unity's null check also skips buildings that have been destroyed.
+        return _buildingsByCell.TryGetValue(cell, out building) && building != null;
+    }
     
     public void Select(BuildingData building)
     {
@@ -95,6 +104,14 @@ public class BuildingPlacer : MonoBehaviour
 
         GameObject instance = Instantiate(Selected.Prefab, grid.AreaToWorldCenter(area), _ghost.transform.rotation);
         grid.SetArea(area, GridMap.CellState.Occupied);
+
+        PlacedBuilding placed = instance.AddComponent<PlacedBuilding>();
+        placed.Init(Selected, area);
+        foreach (Vector2Int cell in area.allPositionsWithin)
+        {
+            _buildingsByCell[cell] = placed;
+        }
+
         BuildingPlaced?.Invoke(Selected, instance, area);
         
         _lastArea = null;

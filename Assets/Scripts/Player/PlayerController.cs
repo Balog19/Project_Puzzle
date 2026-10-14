@@ -1,167 +1,160 @@
+using System;
+using Puzzle.Buildings;
+using Puzzle.Core;
+using Puzzle.UI;
 using UnityEngine;
-using UnityEngine.EventSystems;
-using UnityEngine.InputSystem;
 
-public class PlayerController : MonoBehaviour
+namespace Puzzle.Player
 {
-    [Header("References")]
-    [Tooltip("Defaults to a Camera on this object, then Camera.main.")]
-    [SerializeField] private Camera cam;
-    
-    [Tooltip("The grid controls object for this player")]
-    [SerializeField] private GridControls gridControls;
-
-    [Tooltip("While a building is selected, placement takes over the mouse and drag selection pauses.")]
-    [SerializeField] private BuildingPlacer buildingPlacer;
-
-    [Header("Movement")]
-    [SerializeField, Min(0f)] private float moveSpeed = 10f;
-    [Tooltip("Scale move speed with zoom so panning feels the same zoomed in or out. moveSpeed applies at the starting zoom.")]
-    [SerializeField] private bool scaleSpeedWithZoom = true;
-
-    [Header("Zoom")]
-    [SerializeField, Min(0.01f)] private float zoomStep = 1f;
-    [SerializeField, Min(0.01f)] private float minZoom = 2f;
-    [SerializeField, Min(0.01f)] private float maxZoom = 30f;
-    [Tooltip("How quickly zoom eases toward the target. 0 = instant.")]
-    [SerializeField, Min(0f)] private float zoomSmoothing = 12f;
-    
-    private float _targetZoom;
-    private float _startZoom;
-    
-    private Vector3? _dragStartLocation;
-    private Vector3? _dragEndLocation; 
-    private bool _wasPlacing;
-
-    private void Awake()
+    /// <summary>
+    /// The player (like Unreal's PlayerController + camera pawn). Put it on the Main Camera.
+    /// It is the only script that reads input (from the GameControls input actions asset):
+    /// - Move/Zoom drive the <see cref="CameraController"/>.
+    /// - Mouse input goes to the current <see cref="IInteractionMode"/> (selecting or placing).
+    /// It also owns what the player has selected and starts the HUD.
+    /// </summary>
+    [RequireComponent(typeof(Camera))]
+    public class PlayerController : MonoBehaviour
     {
-        if (cam == null) cam = GetComponent<Camera>();
-        if (cam == null) cam = Camera.main;
+        [Tooltip("Pan and zoom tuning.")]
+        [SerializeField] private CameraSettings cameraSettings = new CameraSettings();
+        [Tooltip("The HUD to start. Found automatically if left empty.")]
+        [SerializeField] private GameHUD hud;
 
-        _targetZoom = Mathf.Clamp(GetZoom(), minZoom, maxZoom);
-        _startZoom = _targetZoom;
-    }
+        /// <summary>Raised when the selected building changes (null = nothing selected).</summary>
+        public event Action<Building> SelectionChanged;
 
-    private void Update()
-    {
-        HandleMovement();
-        HandleZoom();
-        HandleGridControls();
-    }
+        /// <summary>Raised when the interaction mode changes (e.g. placing starts or stops).</summary>
+        public event Action<IInteractionMode> ModeChanged;
 
-    private void HandleGridControls()
-    {
-        Mouse mouse = Mouse.current;
-        if (mouse == null || gridControls == null) return;
+        public Camera Camera { get; private set; }
 
-        if (buildingPlacer != null && buildingPlacer.IsPlacing)
+        /// <summary>The selected building, or null.</summary>
+        public Building SelectedBuilding { get; private set; }
+
+        public IInteractionMode CurrentMode { get; private set; }
+
+        /// <summary>The building being placed, or null when not placing.</summary>
+        public BuildingData PlacingBuilding => CurrentMode == _placeMode ? _placeMode.Building : null;
+
+        private Game _game;
+        private GameControls _controls;
+        private CameraController _cameraController;
+        private SelectMode _selectMode;
+        private PlaceBuildingMode _placeMode;
+
+        // ---------- Lifecycle ----------
+
+        private void Awake()
         {
-            _dragStartLocation = null;
-            _dragEndLocation = null;
-            _wasPlacing = true;
-            return;
+            Camera = GetComponent<Camera>();
+            _controls = new GameControls();
+            _cameraController = new CameraController(Camera, cameraSettings);
         }
 
-        if (_wasPlacing)
-        { _wasPlacing = false;
-            gridControls.ResetCache();
-        }
+        private void OnEnable() => _controls.Gameplay.Enable();
 
-        Vector3? mouseWorldPosition = null;
-        Ray ray = cam.ScreenPointToRay(mouse.position.ReadValue());
-        Plane ground = new Plane(Vector3.up, Vector3.zero);
-        if (ground.Raycast(ray, out float distance))
-        {
-            mouseWorldPosition = ray.GetPoint(distance);
-        }
+        private void OnDisable() => _controls.Gameplay.Disable();
 
-        if (_dragStartLocation == null || _dragEndLocation == null)
+        private void Start()
         {
-            if (mouse.leftButton.wasPressedThisFrame && !IsPointerOverUI())
+            _game = Game.Instance;
+            if (_game == null)
             {
-                _dragStartLocation = mouseWorldPosition;
+                Debug.LogError("PlayerController needs a Game object in the scene.", this);
+                enabled = false;
+                return;
             }
-            if (mouse.leftButton.wasReleasedThisFrame)
+
+            _selectMode = new SelectMode(this, _game);
+            _placeMode = new PlaceBuildingMode(this, _game);
+            SetMode(_selectMode);
+
+            _game.Buildings.Removed += OnBuildingRemoved;
+
+            if (hud == null) hud = FindAnyObjectByType<GameHUD>();
+            if (hud != null) hud.Initialize(this, _game);
+        }
+
+        private void OnDestroy()
+        {
+            if (_game != null) _game.Buildings.Removed -= OnBuildingRemoved;
+            _controls?.Dispose();
+        }
+
+        private void Update()
+        {
+            var input = _controls.Gameplay;
+
+            _cameraController.Update(input.Move.ReadValue<Vector2>(), input.Zoom.ReadValue<float>(), Time.unscaledDeltaTime);
+
+            PointerInfo pointer = ReadPointer(input.Point.ReadValue<Vector2>());
+            CurrentMode.Update(pointer);
+
+            if (input.Select.WasPressedThisFrame() && !pointer.IsOverUI) CurrentMode.OnSelectPressed(pointer);
+            if (input.Select.WasReleasedThisFrame()) CurrentMode.OnSelectReleased(pointer);
+            if (input.Cancel.WasPressedThisFrame()) CurrentMode.OnCancel();
+        }
+
+        // ---------- Modes ----------
+
+        /// <summary>Starts placing a building (e.g. from a build menu button).</summary>
+        public void BeginPlacing(BuildingData building)
+        {
+            if (building == null || building.Prefab == null)
             {
-                _dragEndLocation = mouseWorldPosition;
+                Debug.LogWarning("Can't place a building with no data or prefab.", this);
+                return;
             }
+
+            Select(null);
+            _placeMode.SetBuilding(building);
+            SetMode(_placeMode, forceReenter: true);
         }
-        if (mouse.rightButton.wasPressedThisFrame)
+
+        /// <summary>Returns to the default select mode.</summary>
+        public void EnterSelectMode() => SetMode(_selectMode);
+
+        private void SetMode(IInteractionMode mode, bool forceReenter = false)
         {
-            _dragStartLocation = null;
-            _dragEndLocation = null;
+            if (mode == CurrentMode && !forceReenter) return;
+
+            CurrentMode?.Exit();
+            CurrentMode = mode;
+            CurrentMode.Enter();
+            ModeChanged?.Invoke(CurrentMode);
         }
-        
-        gridControls.UpdateHoveredCells(_dragStartLocation, _dragEndLocation, mouseWorldPosition);
-    }
 
-    private static bool IsPointerOverUI() =>
-        EventSystem.current != null && EventSystem.current.IsPointerOverGameObject();
-    
-    private void HandleMovement()
-    {
-        Keyboard keyboard = Keyboard.current;
-        if (keyboard == null) return;
+        // ---------- Selection ----------
 
-        Vector2 input = Vector2.zero;
-        if (keyboard.wKey.isPressed) input.y += 1f;
-        if (keyboard.sKey.isPressed) input.y -= 1f;
-        if (keyboard.dKey.isPressed) input.x += 1f;
-        if (keyboard.aKey.isPressed) input.x -= 1f;
-        if (input == Vector2.zero) return;
-
-        input.Normalize();
-        Transform view = cam != null ? cam.transform : transform;
-        Vector3 forward = Vector3.ProjectOnPlane(view.forward, Vector3.up);
-        if (forward.sqrMagnitude < 0.0001f) forward = view.up; // looking straight down
-        forward = Vector3.ProjectOnPlane(forward, Vector3.up).normalized;
-        Vector3 right = Vector3.Cross(Vector3.up, forward);
-
-        float speed = moveSpeed;
-        if (scaleSpeedWithZoom) speed *= GetZoom() / _startZoom;
-
-        transform.position += (forward * input.y + right * input.x) * (speed * Time.deltaTime);
-    }
-
-    private void HandleZoom()
-    {
-        if (cam == null) return;
-
-        Mouse mouse = Mouse.current;
-        if (mouse != null)
+        /// <summary>Selects a building (null to deselect).</summary>
+        public void Select(Building building)
         {
-            float scroll = mouse.scroll.ReadValue().y;
-            if (scroll != 0f)
-                _targetZoom = Mathf.Clamp(_targetZoom - Mathf.Sign(scroll) * zoomStep, minZoom, maxZoom);
+            if (building == SelectedBuilding) return;
+            SelectedBuilding = building;
+            SelectionChanged?.Invoke(building);
         }
 
-        float current = GetZoom();
-        float next = zoomSmoothing <= 0f
-            ? _targetZoom
-            : Mathf.Lerp(current, _targetZoom, 1f - Mathf.Exp(-zoomSmoothing * Time.deltaTime));
-
-        SetZoom(next);
-    }
-
-    private float GetZoom()
-    {
-        if (cam == null) return minZoom;
-        if (cam.orthographic) return cam.orthographicSize;
-        
-        Transform view = cam.transform;
-        float down = -view.forward.y;
-        return down > 0.0001f ? view.position.y / down : view.position.y;
-    }
-
-    private void SetZoom(float zoom)
-    {
-        if (cam.orthographic)
+        private void OnBuildingRemoved(Building building)
         {
-            cam.orthographicSize = zoom;
-            return;
+            if (building == SelectedBuilding) Select(null);
         }
-        
-        float delta = GetZoom() - zoom;
-        cam.transform.position += cam.transform.forward * delta;
+
+        // ---------- Pointer ----------
+
+        private PointerInfo ReadPointer(Vector2 screenPosition)
+        {
+            bool overUI = hud != null && hud.IsPointerOverUI(screenPosition);
+
+            Vector3? worldPoint = null;
+            Vector2Int? cell = null;
+            if (_game.Grid.TryRaycast(Camera.ScreenPointToRay(screenPosition), out Vector3 hit))
+            {
+                worldPoint = hit;
+                if (_game.Grid.TryWorldToCell(hit, out Vector2Int c)) cell = c;
+            }
+
+            return new PointerInfo(screenPosition, overUI, worldPoint, cell);
+        }
     }
 }

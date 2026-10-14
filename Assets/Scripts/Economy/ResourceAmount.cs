@@ -1,38 +1,28 @@
 using System;
-using System.Collections.Generic;
-using System.Text;
 using UnityEngine;
 
-/// <summary>
-/// An amount of one resource, e.g. 5 Wood. Used for costs, production and starting stock.
-/// </summary>
-[Serializable]
-public struct ResourceAmount
+namespace Puzzle.Economy
 {
-    [SerializeField] private ResourceType type;
-    [SerializeField, Min(0)] private int amount;
-
-    public ResourceType Type => type;
-    public int Amount => amount;
-
-    public ResourceAmount(ResourceType type, int amount)
+    /// <summary>
+    /// An amount of one resource, e.g. 5 Wood or 0.03 Wood per tick. Used for costs, production,
+    /// upkeep and starting stock, and shows up as an editable row in the Inspector.
+    /// Amounts are floats so per-tick rates can be fractional; the UI rounds them for display.
+    /// </summary>
+    [Serializable]
+    public struct ResourceAmount
     {
-        this.type = type;
-        this.amount = amount;
-    }
+        [Tooltip("Which resource.")]
+        [SerializeField] private ResourceType type;
+        [Tooltip("How much of it. For rates, this is per tick.")]
+        [SerializeField, Min(0f)] private float amount;
 
-    /// <summary>"5 Wood, 2 Stone". Empty string for an empty or null list.</summary>
-    public static string Format(IReadOnlyList<ResourceAmount> amounts)
-    {
-        if (amounts == null || amounts.Count == 0) return string.Empty;
+        public ResourceType Type => type;
+        public float Amount => amount;
 
-        var text = new StringBuilder();
-        foreach (ResourceAmount item in amounts)
+        public ResourceAmount(ResourceType type, float amount)
         {
-            if (item.type == null || item.amount <= 0) continue;
-            if (text.Length > 0) text.Append(", ");
-            text.Append(item.amount).Append(' ').Append(item.type.DisplayName);
+            this.type = type;
+            this.amount = amount;
         }
-        return text.ToString();
     }
 }

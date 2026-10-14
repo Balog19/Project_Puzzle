@@ -1,0 +1,10 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+    <!-- BuildingInfo.uxml: the floating box for the selected building. Rows go in #content (BuildingInfoWidget). -->
+    <ui:VisualElement class="panel">
+        <ui:VisualElement class="info-panel__header">
+            <ui:Label name="title" text="Building" class="label label--title" />
+            <ui:Button name="close" text="X" class="close-button" />
+        </ui:VisualElement>
+        <ui:VisualElement name="content" />
+    </ui:VisualElement>
+</ui:UXML>

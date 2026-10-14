@@ -1,0 +1,4 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+    <!-- ResourceCounter.uxml: one resource in the top bar. Text is set by TopBarWidget. -->
+    <ui:Label name="value" text="Resource: 0" class="label top-bar__item" />
+</ui:UXML>

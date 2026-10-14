@@ -1,0 +1,7 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+    <!-- BuildButton.uxml: one building in the build menu. Name and cost are set by BuildMenuWidget. -->
+    <ui:Button name="button" class="build-button">
+        <ui:Label name="name" text="Building" class="label" picking-mode="Ignore" />
+        <ui:Label name="cost" text="5 Wood" class="label label--dim" picking-mode="Ignore" />
+    </ui:Button>
+</ui:UXML>

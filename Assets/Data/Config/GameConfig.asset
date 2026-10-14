@@ -1,0 +1,39 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 48a6b5cb562345d45b6d8e01730df094, type: 3}
+  m_Name: GameConfig
+  m_EditorClassIdentifier: 
+  gridWidth: 60
+  gridHeight: 60
+  cellSize: 1
+  gridMaterial: {fileID: 2100000, guid: 860d30ead428e554f87353191ceda95b, type: 2}
+  gridOverlayHeight: 0.02
+  ticksPerSecond: 20
+  maxTicksPerFrame: 10
+  resources:
+  - type: {fileID: 11400000, guid: 5589467ea08be774796d7cf53d3693a3, type: 2}
+    amount: 10
+  - type: {fileID: 11400000, guid: f9c1c3cb28cc6194590d52779d314ab2, type: 2}
+    amount: 10
+  - type: {fileID: 11400000, guid: 00b401acf0f04dbea4369c68bc85b44a, type: 2}
+    amount: 50
+  buildings:
+  - {fileID: 11400000, guid: 750b4692dae257d479e19c49f2b946e4, type: 2}
+  - {fileID: 11400000, guid: 66e2cd7f7968fb64b8572b8316c16502, type: 2}
+  - {fileID: 11400000, guid: 628d5e9c03188004483aa5351c2a8236, type: 2}
+  startingPopulation: 5
+  growthIntervalTicks: 200
+  growthAmount: 1
+  needs:
+  - {fileID: 11400000, guid: 3b5d9f0da14d4274ad3aa055d1bae1c6, type: 2}
+  money: {fileID: 11400000, guid: 00b401acf0f04dbea4369c68bc85b44a, type: 2}
+  incomePerTickHoused: 0.02

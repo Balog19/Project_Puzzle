@@ -1,0 +1,4 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+    <!-- BuildMenu.uxml: holds one BuildButton per building in the GameConfig (added by BuildMenuWidget). -->
+    <ui:VisualElement name="buttons" class="build-menu__buttons" picking-mode="Ignore" />
+</ui:UXML>

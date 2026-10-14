@@ -1,0 +1,9 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+    <!-- ProgressRow.uxml: a label above a bar (ProgressRowWidget). Reused for any timer or fill level. -->
+    <ui:VisualElement class="progress-row">
+        <ui:Label name="label" text="Progress" class="label label--small" />
+        <ui:VisualElement class="progress-bar">
+            <ui:VisualElement name="fill" class="progress-bar__fill" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

@@ -1,0 +1,7 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+    <!-- InfoRow.uxml: "Label ..... Value" on one line (InfoRowWidget). Reused for any named stat. -->
+    <ui:VisualElement class="info-row">
+        <ui:Label name="label" text="Label" class="label label--small label--dim" />
+        <ui:Label name="value" text="Value" class="label label--small info-row__value" />
+    </ui:VisualElement>
+</ui:UXML>

@@ -1,0 +1,7 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+    <!-- TopBar.uxml: population plus one ResourceCounter per resource (added by TopBarWidget). -->
+    <ui:VisualElement class="panel top-bar__content">
+        <ui:Label name="population" text="Housed: 0 / 0" class="label top-bar__item" />
+        <ui:VisualElement name="resources" class="top-bar__resources" />
+    </ui:VisualElement>
+</ui:UXML>

@@ -30,7 +30,7 @@ namespace Puzzle.Player
 
         public void Enter()
         {
-            _ghost = SpawnGhost(Building.Prefab);
+            _ghost = SpawnGhost(Building, _game.Grid.CellSize);
             _game.GridView.SetCursor(null);
         }
 
@@ -75,11 +75,20 @@ namespace Puzzle.Player
             return pointer.Cell.HasValue;
         }
 
-        /// <summary>A preview copy of the prefab that can't block raycasts or physics.</summary>
-        private static GameObject SpawnGhost(GameObject prefab)
+        /// <summary>A preview copy of the building (or its placeholder box) that can't block raycasts or physics.</summary>
+        private static GameObject SpawnGhost(BuildingData building, float cellSize)
         {
-            GameObject ghost = Object.Instantiate(prefab);
-            ghost.name = prefab.name + " (Ghost)";
+            GameObject ghost;
+            if (building.Prefab != null)
+            {
+                ghost = Object.Instantiate(building.Prefab);
+            }
+            else
+            {
+                ghost = new GameObject();
+                Placeholders.Building(building.Size, cellSize, ghost.transform);
+            }
+            ghost.name = building.DisplayName + " (Ghost)";
 
             foreach (Collider col in ghost.GetComponentsInChildren<Collider>())
             {

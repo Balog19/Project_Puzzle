@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Puzzle.Buildings;
 using Puzzle.Core;
 using Puzzle.Grid;
@@ -8,8 +9,10 @@ namespace Puzzle.Player
     /// <summary>
     /// The default mode.
     /// - Shows the cursor cell.
-    /// - Click a building to select it; click empty ground to deselect and start a drag selection.
-    /// - A drag selection stays highlighted after release until Cancel or a new click.
+    /// - Click a building to select it (its cells stay highlighted).
+    /// - Press on empty ground and drag to select every building (not roads) in the rectangle; the rectangle stays
+    ///   highlighted while that selection is active.
+    /// - Cancel clears the selection and the highlight.
     /// </summary>
     public class SelectMode : IInteractionMode
     {
@@ -40,26 +43,23 @@ namespace Puzzle.Player
             if (pointer.Cell.HasValue) _lastCell = pointer.Cell;
 
             _game.GridView.SetCursor(pointer.Cell);
-            _game.GridView.SetArea(CurrentDragArea());
+            _game.GridView.SetArea(HighlightedArea());
         }
 
         public void OnSelectPressed(in PointerInfo pointer)
         {
             ClearDrag();
 
-            if (!pointer.Cell.HasValue)
-            {
-                _player.Select(null);
-                return;
-            }
-
-            if (_game.Buildings.TryGetAt(pointer.Cell.Value, out Building building))
+            // Roads start a drag like empty ground (towns are full of them); a plain click still selects one.
+            if (pointer.Cell.HasValue && _game.Buildings.TryGetAt(pointer.Cell.Value, out Building building) && !building.IsRoad)
             {
                 _player.Select(building);
                 return;
             }
 
-            _player.Select(null);
+            _player.ClearSelection();
+            if (!pointer.Cell.HasValue) return;
+
             _dragStart = pointer.Cell;
             _dragging = true;
         }
@@ -70,19 +70,49 @@ namespace Puzzle.Player
 
             _dragging = false;
             _dragEnd = pointer.Cell ?? _lastCell;
+
+            RectInt? area = DragArea();
+            List<Building> found = area.HasValue ? _game.Buildings.GetInArea(area.Value) : new List<Building>();
+            found.RemoveAll(b => b.IsRoad); // a drag over a town shouldn't open a box per road tile
+
+            // A click (no drag) on a road selects that road.
+            if (found.Count == 0 && area.HasValue && area.Value.width == 1 && area.Value.height == 1
+                && _game.Buildings.TryGetAt(area.Value.position, out Building road))
+            {
+                ClearDrag();
+                _player.Select(road);
+                return;
+            }
+
+            _player.SelectMany(found);
+
+            // A drag that caught nothing leaves nothing highlighted.
+            if (found.Count == 0) ClearDrag();
         }
 
         public void OnCancel()
         {
-            // First cancel clears the drag selection, the next one deselects the building.
-            if (_dragStart.HasValue) ClearDrag();
-            else _player.Select(null);
+            ClearDrag();
+            _player.ClearSelection();
         }
 
-        // ---------- Drag ----------
+        // ---------- Highlight ----------
 
-        /// <summary>The highlighted rectangle: start to mouse while dragging, start to end after release.</summary>
-        private RectInt? CurrentDragArea()
+        /// <summary>The drag rectangle while dragging or while its selection is active; else a lone selected building's cells.</summary>
+        private RectInt? HighlightedArea()
+        {
+            if (_dragStart.HasValue)
+            {
+                // The drag's selection was cleared elsewhere (e.g. info boxes closed): drop the rectangle too.
+                if (!_dragging && _player.Selection.Count == 0) ClearDrag();
+                else return DragArea();
+            }
+
+            return _player.Selection.Count == 1 ? _player.Selection[0].Area : (RectInt?)null;
+        }
+
+        /// <summary>Start to mouse while dragging, start to end after release.</summary>
+        private RectInt? DragArea()
         {
             if (!_dragStart.HasValue) return null;
 

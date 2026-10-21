@@ -8,7 +8,8 @@ namespace Puzzle.UI
     /// <summary>
     /// The bar at the top of the screen (layout: UI/Layouts/TopBar.uxml).
     /// Shows population (housed / total, starving), then one counter per resource in the GameConfig,
-    /// created automatically from the ResourceCounter template. Money also shows its net change per tick.
+    /// created automatically from the ResourceCounter template. Each counter shows the stockpile (what building
+    /// costs can use), plus goods still sitting in buildings; Money also shows its net change per tick.
     /// </summary>
     public class TopBarWidget : Widget
     {
@@ -29,26 +30,33 @@ namespace Puzzle.UI
                 if (entry.Type == null || _counters.ContainsKey(entry.Type)) continue;
 
                 _counters[entry.Type] = Spawn(counterTemplate, resourceList).Q<Label>("value");
-                SetCounter(entry.Type, game.Resources.Get(entry.Type));
             }
 
-            game.Resources.Changed += SetCounter;
+            // Goods in buildings change every tick, so the counters refresh once per tick.
+            game.Ticks.Ticked += RefreshCounters;
             game.Population.Changed += RefreshPopulation;
-            OnDispose(() => game.Resources.Changed -= SetCounter);
+            OnDispose(() => game.Ticks.Ticked -= RefreshCounters);
             OnDispose(() => game.Population.Changed -= RefreshPopulation);
 
+            RefreshCounters();
             RefreshPopulation();
         }
 
-        private void SetCounter(ResourceType type, float amount)
+        private void RefreshCounters()
         {
-            if (!_counters.TryGetValue(type, out Label counter)) return;
+            foreach (var pair in _counters)
+            {
+                ResourceType type = pair.Key;
+                float stockpile = _game.Resources.Get(type);
+                float inBuildings = _game.Supply.TotalStored(type);
 
-            string text = $"{type.DisplayName}: {UIFormat.Whole(amount)}";
-            if (type == _game.Config.Money) text += $" ({UIFormat.SignedRate(NetMoneyPerTick())}/tick)";
+                string text = $"{type.DisplayName}: {UIFormat.Whole(stockpile)}";
+                if (inBuildings >= 1f) text += $" (+{UIFormat.Whole(inBuildings)} in buildings)";
+                if (type == _game.Config.Money) text += $" ({UIFormat.SignedRate(NetMoneyPerTick())}/tick)";
 
-            counter.text = text;
-            counter.EnableInClassList(NegativeClass, amount < 0f);
+                pair.Value.text = text;
+                pair.Value.EnableInClassList(NegativeClass, stockpile < 0f);
+            }
         }
 
         /// <summary>Taxes minus building upkeep, per tick.</summary>

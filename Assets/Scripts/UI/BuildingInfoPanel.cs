@@ -2,67 +2,68 @@ using System;
 using System.Collections.Generic;
 using Puzzle.Buildings;
 using Puzzle.Core;
+using Puzzle.Economy;
 using Puzzle.Player;
 using Puzzle.Population;
+using Puzzle.Transport;
 using UnityEngine;
 using UnityEngine.UIElements;
 
 namespace Puzzle.UI
 {
     /// <summary>
-    /// The info box for the selected building (layout: UI/Layouts/BuildingInfo.uxml).
-    /// Floats above the building on screen at a constant size and lists what the building does,
-    /// refreshed every frame. To show something new, add a section in <see cref="BuildSections"/>
-    /// using <see cref="AddInfoRow"/> or <see cref="AddProgressRow"/>.
+    /// The info box for one selected building (layout: UI/Layouts/BuildingInfo.uxml). Created by
+    /// SelectionInfoWidget, one per selected building. Floats above its building at a constant size and
+    /// lists what the building does, refreshed every frame. To show something new, add a section in
+    /// <see cref="BuildSections"/> using <see cref="AddInfoRow"/> or <see cref="AddProgressRow"/>.
     /// </summary>
-    public class BuildingInfoWidget : Widget
+    public class BuildingInfoPanel : Widget
     {
+        /// <summary>The building this box describes.</summary>
+        public Building Building { get; }
+
         private readonly Game _game;
-        private readonly PlayerController _player;
         private readonly VisualTreeAsset _progressRowTemplate;
         private readonly VisualTreeAsset _infoRowTemplate;
-        private readonly float _heightAboveBuilding;
-
-        private readonly Label _title;
         private readonly VisualElement _content;
+        private readonly Vector3 _worldAnchor;
 
         // The rows currently shown, and how to refresh each of them every frame.
         private readonly List<Widget> _rows = new List<Widget>();
         private readonly List<Action> _refreshers = new List<Action>();
 
-        private Building _building;
-        private House _house;
-        private Vector3 _worldAnchor;
-
-        public BuildingInfoWidget(VisualElement root, Game game, PlayerController player,
+        public BuildingInfoPanel(VisualElement root, Building building, Game game, PlayerController player,
             VisualTreeAsset progressRowTemplate, VisualTreeAsset infoRowTemplate, float heightAboveBuilding) : base(root)
         {
+            Building = building;
             _game = game;
-            _player = player;
             _progressRowTemplate = progressRowTemplate;
             _infoRowTemplate = infoRowTemplate;
-            _heightAboveBuilding = heightAboveBuilding;
+            _worldAnchor = building.GetTopCenter(heightAboveBuilding);
 
-            _title = Q<Label>("title");
+            Q<Label>("title").text = building.DisplayName;
             _content = Q<VisualElement>("content");
-            Q<Button>("close").clicked += () => _player.Select(null);
+            Q<Button>("close").clicked += () => player.Deselect(building);
 
-            player.SelectionChanged += ShowFor;
-            OnDispose(() => player.SelectionChanged -= ShowFor);
-            OnDispose(() => SetHouse(null));
-
-            Hide();
-        }
-
-        /// <summary>Called every frame by GameHUD (after the camera moved) to refresh rows and follow the building.</summary>
-        public void LateUpdate(Camera camera)
-        {
-            if (_building == null)
+            // Rebuild when people move in or out, or when roads/buildings change who reaches this building.
+            House house = building.House;
+            if (house != null)
             {
-                if (IsVisible) ShowFor(null); // building was destroyed
-                return;
+                house.ResidentsChanged += OnResidentsChanged;
+                OnDispose(() => house.ResidentsChanged -= OnResidentsChanged);
+            }
+            if (house != null || building.Storage != null)
+            {
+                game.Supply.Changed += BuildSections;
+                OnDispose(() => game.Supply.Changed -= BuildSections);
             }
 
+            BuildSections();
+        }
+
+        /// <summary>Called every frame (after the camera moved) to refresh rows and follow the building.</summary>
+        public void LateUpdate(Camera camera)
+        {
             foreach (Action refresh in _refreshers)
             {
                 refresh();
@@ -76,22 +77,10 @@ namespace Puzzle.UI
             }
         }
 
-        private void ShowFor(Building building)
+        public override void Dispose()
         {
-            _building = building;
-            SetHouse(building != null ? building.House : null);
-
-            if (building == null)
-            {
-                ClearRows();
-                Hide();
-                return;
-            }
-
-            _title.text = building.DisplayName;
-            _worldAnchor = building.GetTopCenter(_heightAboveBuilding);
-            BuildSections();
-            Show();
+            ClearRows();
+            base.Dispose();
         }
 
         // ---------- Sections ----------
@@ -99,31 +88,75 @@ namespace Puzzle.UI
         private void BuildSections()
         {
             ClearRows();
-            if (_building == null) return;
 
-            if (_building.Producer != null)
+            if (Building.Producer != null)
             {
-                string produces = UIFormat.RatesPerTick(_building.Producer.OutputPerTick, "+");
+                string produces = UIFormat.RatesPerTick(Building.Producer.OutputPerTick, "+");
                 AddInfoRow(() => ("Produces", produces, false));
             }
 
-            if (_building.Upkeep != null)
+            if (Building.Inventory != null)
             {
-                string upkeep = UIFormat.RatesPerTick(_building.Upkeep.CostPerTick, "-");
+                Inventory inventory = Building.Inventory;
+                AddInfoRow(() => ("Stock", StockText(inventory), false));
+            }
+
+            if (Building.Upkeep != null)
+            {
+                string upkeep = UIFormat.RatesPerTick(Building.Upkeep.CostPerTick, "-");
                 AddInfoRow(() => ("Upkeep", upkeep, true));
             }
 
-            House house = _building.House;
+            StorageCollector storage = Building.Storage;
+            if (storage != null)
+            {
+                AddInfoRow(() => ("Storage", "shared pool", false));
+                AddInfoRow(() => ("Collecting", $"{UIFormat.Number(storage.CollectedLastTick)} / tick", false));
+                AddLinkRows(_game.Supply.ProducersFor(Building), "Collecting from");
+            }
+
+            House house = Building.House;
             if (house != null)
             {
                 AddProgressRow(() => $"Residents: {house.ResidentCount} / {house.Capacity}",
                                () => house.Capacity > 0 ? (float)house.ResidentCount / house.Capacity : 0f);
+
+                AddLinkRows(_game.Supply.SuppliersFor(Building), "Supplied by");
 
                 foreach (Person person in house.Residents)
                 {
                     AddInfoRow(() => (person.ToString(), ResidentStatus(person), person.IsIncomeBlocked));
                 }
             }
+        }
+
+        /// <summary>One row per linked building ("Supplied by Farmland   5 roads"), or a warning if there are none.</summary>
+        private void AddLinkRows(IReadOnlyList<Link> links, string label)
+        {
+            if (links.Count == 0)
+            {
+                int max = _game.Supply.MaxDistance;
+                AddInfoRow(() => (label, $"nothing within {max} roads", true));
+                return;
+            }
+
+            foreach (Link link in links)
+            {
+                string name = link.Building.DisplayName;
+                string distance = $"{link.RoadDistance} road{(link.RoadDistance == 1 ? "" : "s")}";
+                AddInfoRow(() => ($"{label} {name}", distance, false));
+            }
+        }
+
+        /// <summary>"23 Wheat, 4 Wood", or "empty".</summary>
+        private static string StockText(Inventory inventory)
+        {
+            var parts = new List<string>();
+            foreach (var pair in inventory.Contents)
+            {
+                parts.Add($"{UIFormat.Whole(pair.Value)} {pair.Key.DisplayName}");
+            }
+            return parts.Count > 0 ? string.Join(", ", parts) : "empty";
         }
 
         /// <summary>"Fed, +0.04 Money / tick" or "Starving, +0 Money / tick".</summary>
@@ -138,14 +171,6 @@ namespace Puzzle.UI
             string money = _game.Config.Money != null ? _game.Config.Money.DisplayName : "Money";
             status.Add($"{UIFormat.SignedRate(person.IncomePerTick(_game.Config))} {money} / tick");
             return string.Join(", ", status);
-        }
-
-        // Rebuild when people move in or out of the shown house.
-        private void SetHouse(House house)
-        {
-            if (_house != null) _house.ResidentsChanged -= OnResidentsChanged;
-            _house = house;
-            if (_house != null) _house.ResidentsChanged += OnResidentsChanged;
         }
 
         private void OnResidentsChanged(House house) => BuildSections();

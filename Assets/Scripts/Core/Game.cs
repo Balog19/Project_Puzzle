@@ -2,6 +2,7 @@ using Puzzle.Buildings;
 using Puzzle.Economy;
 using Puzzle.Grid;
 using Puzzle.Population;
+using Puzzle.Transport;
 using UnityEngine;
 
 namespace Puzzle.Core
@@ -33,10 +34,14 @@ namespace Puzzle.Core
         public GridView GridView { get; private set; }
         /// <summary>The fixed game clock.</summary>
         public TickSystem Ticks { get; private set; }
-        /// <summary>The global resource pool.</summary>
+        /// <summary>The shared storage pool (all storages + the starting stockpile); pays building costs.</summary>
         public ResourceSystem Resources { get; private set; }
         /// <summary>Placing, finding and removing buildings.</summary>
         public BuildingSystem Buildings { get; private set; }
+        /// <summary>Road tiles: auto-connecting pieces and road distances.</summary>
+        public RoadSystem Roads { get; private set; }
+        /// <summary>Road reach between buildings: what houses can take from, what storages collect from.</summary>
+        public SupplySystem Supply { get; private set; }
         /// <summary>People, their needs, and housing.</summary>
         public PopulationSystem Population { get; private set; }
 
@@ -65,7 +70,9 @@ namespace Puzzle.Core
             Ticks = new TickSystem(config.TicksPerSecond, config.MaxTicksPerFrame);
             Resources = new ResourceSystem(config.Resources);
             Buildings = new BuildingSystem(Grid, Resources, Ticks, CreateChild("Buildings"));
-            Population = new PopulationSystem(config, Resources, Buildings, Ticks);
+            Roads = new RoadSystem(Grid, Buildings);
+            Supply = new SupplySystem(Roads, Buildings, Resources, Ticks, config.MaxSupplyRoadDistance);
+            Population = new PopulationSystem(config, Resources, Buildings, Ticks, Supply);
         }
 
         private void Update()
@@ -78,6 +85,8 @@ namespace Puzzle.Core
             if (Instance != this) return;
 
             Population?.Dispose();
+            Supply?.Dispose();
+            Roads?.Dispose();
             Instance = null;
         }
 

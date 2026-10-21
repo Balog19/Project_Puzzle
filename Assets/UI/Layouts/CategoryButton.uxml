@@ -1,0 +1,7 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+    <!-- CategoryButton.uxml: one big button in the build bar (optional icon + name). Set up by BuildMenuWidget. -->
+    <ui:Button name="button" class="category-button">
+        <ui:VisualElement name="icon" class="category-button__icon" picking-mode="Ignore" />
+        <ui:Label name="name" text="Category" class="label category-button__name" picking-mode="Ignore" />
+    </ui:Button>
+</ui:UXML>

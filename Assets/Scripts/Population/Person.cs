@@ -24,7 +24,8 @@ namespace Puzzle.Population
 
     /// <summary>
     /// A single person. Plain data, not a GameObject: owned, ticked and moved between houses by
-    /// PopulationSystem. Each tick they pay for their needs and generate money for each demand that is met
+    /// PopulationSystem. Each tick they take what they need from buildings within road reach of their home
+    /// (the homeless can't get anything) and generate money for each demand that is met
     /// (being housed, being fed...). New per-person state (job, happiness...) goes here.
     /// </summary>
     public class Person
@@ -68,20 +69,39 @@ namespace Puzzle.Population
 
         public NeedState GetNeed(NeedType type) => _needs.Find(n => n.Type == type);
 
-        /// <summary>Pays for every need from the pool. A need is unmet this tick if the pool can't cover it.</summary>
-        public void Tick(ResourceSystem pool)
+        /// <summary>
+        /// Pays for every need from what this person can reach: producers and storages within road range of
+        /// their home (nearest first, splitting across several if needed). A need is unmet this tick if
+        /// they don't hold enough between them.
+        /// </summary>
+        public void Tick(IReadOnlyList<IStock> sources)
         {
             foreach (NeedState need in _needs)
             {
                 ResourceType resource = need.Type.Resource;
                 float amount = need.Type.AmountPerTick;
 
-                bool met = resource == null || amount <= 0f || pool.Get(resource) >= amount;
-                if (met) pool.Take(resource, amount);
+                bool met = resource == null || amount <= 0f || Available(sources, resource) >= amount;
+                if (met) TakeFrom(sources, resource, amount);
 
                 bool wasMet = need.IsMet;
                 need.IsMet = met;
                 if (wasMet && !met) NeedUnmet?.Invoke(this, need);
+            }
+        }
+
+        private static float Available(IReadOnlyList<IStock> sources, ResourceType resource)
+        {
+            float total = 0f;
+            for (int i = 0; i < sources.Count; i++) total += sources[i].Get(resource);
+            return total;
+        }
+
+        private static void TakeFrom(IReadOnlyList<IStock> sources, ResourceType resource, float amount)
+        {
+            for (int i = 0; i < sources.Count && amount > 0f; i++)
+            {
+                amount -= sources[i].Take(resource, amount);
             }
         }
 

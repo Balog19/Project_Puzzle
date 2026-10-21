@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Puzzle.Buildings;
 using Puzzle.Core;
 using Puzzle.Economy;
+using Puzzle.Transport;
 
 namespace Puzzle.Population
 {
@@ -10,7 +11,8 @@ namespace Puzzle.Population
     /// Owns every <see cref="Person"/>. Plain C# object created by Game and ticked in the Population phase.
     /// - The population grows over time.
     /// - Homeless people move into houses with room (in placement order); existing residents are never reshuffled.
-    /// - Every tick, each person pays for their needs, then everyone's taxes are added to Money in one go.
+    /// - Every tick, each person takes what they need from buildings within road reach of their house
+    ///   (homeless people can't get anything), then everyone's taxes are added to Money in one go.
     /// </summary>
     public class PopulationSystem : ITickable, IDisposable
     {
@@ -37,14 +39,19 @@ namespace Puzzle.Population
         private readonly ResourceSystem _resources;
         private readonly BuildingSystem _buildings;
         private readonly TickSystem _ticks;
+        private readonly SupplySystem _supply;
+        private readonly List<IStock> _sources = new List<IStock>();
+        private static readonly List<IStock> NoSources = new List<IStock>();
 
         private readonly List<Person> _people = new List<Person>();
         private readonly List<House> _houses = new List<House>();
         private int _nextPersonId = 1;
         private int _growthTicks;
 
-        public PopulationSystem(GameConfig config, ResourceSystem resources, BuildingSystem buildings, TickSystem ticks)
+        public PopulationSystem(GameConfig config, ResourceSystem resources, BuildingSystem buildings,
+            TickSystem ticks, SupplySystem supply)
         {
+            _supply = supply;
             _config = config;
             _resources = resources;
             _buildings = buildings;
@@ -77,7 +84,7 @@ namespace Puzzle.Population
             int starving = 0;
             foreach (Person person in _people)
             {
-                person.Tick(_resources);
+                person.Tick(SourcesFor(person));
                 income += person.IncomePerTick(_config);
                 if (person.IsIncomeBlocked) starving++;
             }
@@ -90,6 +97,22 @@ namespace Puzzle.Population
                 Starving = starving;
                 Changed?.Invoke();
             }
+        }
+
+        /// <summary>
+        /// What this person can take from, nearest first: producers' own stock, and the shared storage pool
+        /// through any storage in road reach (listed once even if several storages reach the house).
+        /// </summary>
+        private IReadOnlyList<IStock> SourcesFor(Person person)
+        {
+            if (!person.IsHoused) return NoSources;
+
+            _sources.Clear();
+            foreach (Link link in _supply.SuppliersFor(person.Home.Building))
+            {
+                if (!_sources.Contains(link.Stock)) _sources.Add(link.Stock);
+            }
+            return _sources;
         }
 
         private void TickGrowth()

@@ -11,8 +11,10 @@ namespace Puzzle.Core
         Production,
         /// <summary>Things that spend resources (reserved for building upkeep etc.).</summary>
         Consumption,
-        /// <summary>Population growth, housing and people's needs.</summary>
-        Population
+        /// <summary>Population growth, housing and people's needs (people eat).</summary>
+        Population,
+        /// <summary>Storages collect goods left in producers into the storage pool (after people ate).</summary>
+        Logistics
     }
 
     /// <summary>

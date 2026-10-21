@@ -18,8 +18,12 @@ namespace Puzzle.UI
         [Header("Templates (UI/Layouts)")]
         [Tooltip("One per resource in the top bar.")]
         [SerializeField] private VisualTreeAsset resourceCounterTemplate;
-        [Tooltip("One per building in the build menu.")]
+        [Tooltip("One per category in the build bar.")]
+        [SerializeField] private VisualTreeAsset categoryButtonTemplate;
+        [Tooltip("One per building in a build tray.")]
         [SerializeField] private VisualTreeAsset buildButtonTemplate;
+        [Tooltip("The floating info box, one per selected building.")]
+        [SerializeField] private VisualTreeAsset buildingInfoTemplate;
         [Tooltip("A label + progress bar, used in the building info box.")]
         [SerializeField] private VisualTreeAsset progressRowTemplate;
         [Tooltip("A label + value line, used in the building info box.")]
@@ -31,13 +35,17 @@ namespace Puzzle.UI
 
         private UIDocument _document;
         private PlayerController _player;
-        private BuildingInfoWidget _buildingInfo;
+        private SelectionInfoWidget _selectionInfo;
         private readonly List<Widget> _widgets = new List<Widget>();
 
         private void Awake()
         {
             _document = GetComponent<UIDocument>();
         }
+
+        /// <summary>The widgets, for code that needs to drive them (e.g. opening a build category).</summary>
+        public BuildMenuWidget BuildMenu { get; private set; }
+        public SelectionInfoWidget SelectionInfo => _selectionInfo;
 
         /// <summary>Builds the widgets. Called once by PlayerController when the game starts.</summary>
         public void Initialize(PlayerController player, Game game)
@@ -48,8 +56,8 @@ namespace Puzzle.UI
             root.pickingMode = PickingMode.Ignore; // empty HUD space must not block clicks on the world
 
             Add(new TopBarWidget(root.Q("top-bar"), game, resourceCounterTemplate));
-            Add(new BuildMenuWidget(root.Q("build-menu"), game, player, buildButtonTemplate));
-            _buildingInfo = Add(new BuildingInfoWidget(root.Q("building-info"), game, player,
+            BuildMenu = Add(new BuildMenuWidget(root.Q("build-menu"), game, player, categoryButtonTemplate, buildButtonTemplate));
+            _selectionInfo = Add(new SelectionInfoWidget(root.Q("selection-info"), game, player, buildingInfoTemplate,
                 progressRowTemplate, infoRowTemplate, infoHeightAboveBuilding));
         }
 
@@ -61,7 +69,7 @@ namespace Puzzle.UI
 
         private void LateUpdate()
         {
-            if (_buildingInfo != null) _buildingInfo.LateUpdate(_player.Camera);
+            if (_selectionInfo != null) _selectionInfo.LateUpdate(_player.Camera);
         }
 
         private void OnDestroy()
@@ -86,13 +94,18 @@ namespace Puzzle.UI
         }
 
 #if UNITY_EDITOR
-        // Fills in the templates automatically when the component is added.
-        private void Reset()
+        // Fills in any missing template from UI/Layouts, so new templates never need wiring by hand.
+        private void Reset() => FillMissingTemplates();
+        private void OnValidate() => FillMissingTemplates();
+
+        private void FillMissingTemplates()
         {
-            resourceCounterTemplate = LoadLayout("ResourceCounter");
-            buildButtonTemplate = LoadLayout("BuildButton");
-            progressRowTemplate = LoadLayout("ProgressRow");
-            infoRowTemplate = LoadLayout("InfoRow");
+            if (resourceCounterTemplate == null) resourceCounterTemplate = LoadLayout("ResourceCounter");
+            if (categoryButtonTemplate == null) categoryButtonTemplate = LoadLayout("CategoryButton");
+            if (buildButtonTemplate == null) buildButtonTemplate = LoadLayout("BuildButton");
+            if (buildingInfoTemplate == null) buildingInfoTemplate = LoadLayout("BuildingInfo");
+            if (progressRowTemplate == null) progressRowTemplate = LoadLayout("ProgressRow");
+            if (infoRowTemplate == null) infoRowTemplate = LoadLayout("InfoRow");
         }
 
         private static VisualTreeAsset LoadLayout(string layoutName) =>

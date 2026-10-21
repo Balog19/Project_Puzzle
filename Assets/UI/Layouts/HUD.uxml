@@ -1,14 +1,14 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
     <!-- HUD.uxml: the root layout. Set it as the UIDocument's Source Asset.
          Each section is a nested template (like nesting UMG widgets) driven by a widget class:
-         top-bar -> TopBarWidget, build-menu -> BuildMenuWidget, building-info -> BuildingInfoWidget. -->
+         top-bar -> TopBarWidget, build-menu -> BuildMenuWidget,
+         selection-info -> SelectionInfoWidget (one BuildingInfo box per selected building). -->
     <ui:Template name="TopBar" src="/Assets/UI/Layouts/TopBar.uxml" />
     <ui:Template name="BuildMenu" src="/Assets/UI/Layouts/BuildMenu.uxml" />
-    <ui:Template name="BuildingInfo" src="/Assets/UI/Layouts/BuildingInfo.uxml" />
     <Style src="/Assets/UI/Styles/Game.uss" />
     <ui:VisualElement name="hud" class="hud" picking-mode="Ignore">
+        <ui:VisualElement name="selection-info" class="layer" picking-mode="Ignore" />
         <ui:Instance template="TopBar" name="top-bar" class="top-bar" picking-mode="Ignore" />
         <ui:Instance template="BuildMenu" name="build-menu" class="build-menu" picking-mode="Ignore" />
-        <ui:Instance template="BuildingInfo" name="building-info" class="info-panel" />
     </ui:VisualElement>
 </ui:UXML>

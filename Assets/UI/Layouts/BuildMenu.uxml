@@ -1,4 +1,11 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
-    <!-- BuildMenu.uxml: holds one BuildButton per building in the GameConfig (added by BuildMenuWidget). -->
-    <ui:VisualElement name="buttons" class="build-menu__buttons" picking-mode="Ignore" />
+    <!-- BuildMenu.uxml: the tray (filled with BuildButtons for the open category) above the category bar
+         (one CategoryButton per GameConfig category). Driven by BuildMenuWidget. -->
+    <ui:VisualElement class="build-menu__stack" picking-mode="Ignore">
+        <ui:VisualElement name="tray" class="panel build-tray">
+            <ui:VisualElement name="tray-buttons" class="build-tray__buttons" picking-mode="Ignore" />
+            <ui:Label name="tray-empty" text="Nothing to build here yet" class="label label--dim build-tray__empty" />
+        </ui:VisualElement>
+        <ui:VisualElement name="categories" class="build-categories" picking-mode="Ignore" />
+    </ui:VisualElement>
 </ui:UXML>

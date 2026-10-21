@@ -13,6 +13,8 @@ MonoBehaviour:
   m_Name: Farmland
   m_EditorClassIdentifier: 
   displayName: Farmland
+  category: {fileID: 11400000, guid: e3185fbe20bf471f8a04697739131855, type: 2}
+  icon: {fileID: 0}
   prefab: {fileID: 919132149155446097, guid: 8d672cf774e7c9640a82fcc045224b02, type: 3}
   size: {x: 1, y: 1}
   housingCapacity: 0

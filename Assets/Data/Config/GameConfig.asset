@@ -21,19 +21,28 @@ MonoBehaviour:
   maxTicksPerFrame: 10
   resources:
   - type: {fileID: 11400000, guid: 5589467ea08be774796d7cf53d3693a3, type: 2}
-    amount: 10
+    amount: 60
   - type: {fileID: 11400000, guid: f9c1c3cb28cc6194590d52779d314ab2, type: 2}
-    amount: 10
+    amount: 0
   - type: {fileID: 11400000, guid: 00b401acf0f04dbea4369c68bc85b44a, type: 2}
     amount: 50
+  categories:
+  - {fileID: 11400000, guid: acdbc8d9568a4e27be2a5548938da032, type: 2}
+  - {fileID: 11400000, guid: e3185fbe20bf471f8a04697739131855, type: 2}
+  - {fileID: 11400000, guid: da5a38c79a654a5a8e43a7b85d0be351, type: 2}
+  - {fileID: 11400000, guid: 8d34a602bb6c425bbc2ea4d385861186, type: 2}
+  - {fileID: 11400000, guid: 6c7588ffe963481cae3ffc32157f4e0f, type: 2}
   buildings:
   - {fileID: 11400000, guid: 750b4692dae257d479e19c49f2b946e4, type: 2}
   - {fileID: 11400000, guid: 66e2cd7f7968fb64b8572b8316c16502, type: 2}
   - {fileID: 11400000, guid: 628d5e9c03188004483aa5351c2a8236, type: 2}
+  - {fileID: 11400000, guid: 77ea8b4e6a7947c0a9e3ef14eda57e9e, type: 2}
+  - {fileID: 11400000, guid: 53195cf7551b470ebd41f49de2dd9bd8, type: 2}
   startingPopulation: 5
   growthIntervalTicks: 200
   growthAmount: 1
   needs:
   - {fileID: 11400000, guid: 3b5d9f0da14d4274ad3aa055d1bae1c6, type: 2}
+  maxSupplyRoadDistance: 10
   money: {fileID: 11400000, guid: 00b401acf0f04dbea4369c68bc85b44a, type: 2}
   incomePerTickHoused: 0.02

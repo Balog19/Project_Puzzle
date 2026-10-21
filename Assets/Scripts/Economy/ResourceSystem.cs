@@ -5,11 +5,13 @@ using UnityEngine;
 namespace Puzzle.Economy
 {
     /// <summary>
-    /// The global resource pool: how much of each <see cref="ResourceType"/> the player has.
+    /// The global resource pool: how much of each <see cref="ResourceType"/> is in storage.
+    /// Every Storage building shares it (they collect into it and deliver from it), the starting
+    /// resources begin in it, and building costs are paid from it.
     /// Plain C# object created by Game. Amounts are floats (rates can be fractional).
     /// Goods never go below zero; types with <see cref="ResourceType.AllowNegative"/> (Money) can go into debt.
     /// </summary>
-    public class ResourceSystem
+    public class ResourceSystem : IStock
     {
         /// <summary>Raised when a resource's amount changes: the resource and its new amount.</summary>
         public event Action<ResourceType, float> Changed;

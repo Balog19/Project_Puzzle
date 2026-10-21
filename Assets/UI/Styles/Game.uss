@@ -25,6 +25,15 @@
     flex-grow: 1;
 }
 
+/* A full-screen, click-through layer (e.g. for floating info boxes). */
+.layer {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+}
+
 .panel {
     background-color: var(--panel-bg);
     border-width: 1px;
@@ -81,25 +90,82 @@
 
 /* ---------- Build menu ---------- */
 
+/* Full-width strip along the bottom; the tray sits above the category bar. */
 .build-menu {
     position: absolute;
-    left: var(--edge);
+    left: 0;
+    right: 0;
     bottom: var(--edge);
+    align-items: center;
 }
 
-.build-menu__buttons {
+.build-menu__stack {
+    align-items: center;
+}
+
+.build-categories {
     flex-direction: row;
 }
 
-.build-button {
+.category-button {
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    min-width: 170px;
+    height: 56px;
+    margin: 0 4px;
+    padding: 0 16px;
     background-color: var(--button-bg);
     border-width: 2px;
     border-color: var(--panel-border);
     border-radius: var(--radius);
-    padding: 8px 14px;
-    margin: 0 8px 0 0;
-    min-width: 110px;
-    align-items: flex-start;
+}
+
+.category-button:hover {
+    background-color: var(--button-hover);
+}
+
+.category-button--open {
+    border-color: var(--accent);
+    background-color: var(--button-hover);
+}
+
+.category-button__icon {
+    width: 28px;
+    height: 28px;
+    margin-right: 8px;
+    -unity-background-scale-mode: scale-to-fit;
+}
+
+.category-button__name {
+    font-size: 18px;
+    -unity-font-style: bold;
+}
+
+.build-tray {
+    flex-direction: row;
+    margin-bottom: 8px;
+    padding: 8px;
+}
+
+.build-tray__buttons {
+    flex-direction: row;
+}
+
+.build-tray__empty {
+    padding: 8px 16px;
+}
+
+.build-button {
+    flex-direction: column;
+    align-items: center;
+    width: 96px;
+    margin: 0 4px;
+    padding: 8px 6px;
+    background-color: var(--button-bg);
+    border-width: 2px;
+    border-color: var(--panel-border);
+    border-radius: var(--radius);
 }
 
 .build-button:hover {
@@ -114,9 +180,33 @@
     border-color: var(--accent);
 }
 
+.build-button__icon {
+    width: 48px;
+    height: 48px;
+    margin-bottom: 6px;
+    border-radius: 4px;
+    background-color: var(--bar-bg);
+    justify-content: center;
+    align-items: center;
+    -unity-background-scale-mode: scale-to-fit;
+}
+
+.build-button__icon-letter {
+    color: var(--text);
+    font-size: 24px;
+    -unity-font-style: bold;
+    margin: 0;
+    padding: 0;
+}
+
+.build-button__name,
+.build-button__cost {
+    -unity-text-align: middle-center;
+}
+
 /* ---------- Building info ---------- */
 
-/* Positioned every frame by BuildingInfoWidget; translate puts its bottom-center on the building. */
+/* Positioned every frame by BuildingInfoPanel; translate puts its bottom-center on the building. */
 .info-panel {
     position: absolute;
     translate: -50% -100%;

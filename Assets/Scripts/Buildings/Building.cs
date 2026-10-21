@@ -1,5 +1,6 @@
 using Puzzle.Economy;
 using Puzzle.Population;
+using Puzzle.Transport;
 using UnityEngine;
 
 namespace Puzzle.Buildings
@@ -20,13 +21,21 @@ namespace Puzzle.Buildings
         /// <summary>Its production, or null if it doesn't produce.</summary>
         public Producer Producer { get; internal set; }
 
+        /// <summary>Goods this building holds (what it produced), or null if it holds nothing.</summary>
+        public Inventory Inventory { get; internal set; }
+
         /// <summary>Its running cost, or null if it has none.</summary>
         public Upkeep Upkeep { get; internal set; }
+
+        /// <summary>Its storage collecting, or null if it isn't a storage. Set by SupplySystem.</summary>
+        public StorageCollector Storage { get; internal set; }
 
         /// <summary>Its housing, or null if nobody lives here. Set by PopulationSystem.</summary>
         public House House { get; internal set; }
 
         public string DisplayName => Data != null ? Data.DisplayName : name;
+
+        public bool IsRoad => Data != null && Data.IsRoad;
 
         internal void Init(BuildingData data, RectInt area)
         {

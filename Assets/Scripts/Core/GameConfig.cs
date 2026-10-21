@@ -34,11 +34,13 @@ namespace Puzzle.Core
         [SerializeField, Min(1)] private int maxTicksPerFrame = 10;
 
         [Header("Resources")]
-        [Tooltip("Resources shown in the top bar, in this order, with the amount the game starts with.")]
+        [Tooltip("Resources shown in the top bar, in this order, with the amount the starting stockpile holds. Building costs are paid from the stockpile.")]
         [SerializeField] private List<ResourceAmount> resources = new List<ResourceAmount>();
 
         [Header("Buildings")]
-        [Tooltip("Buildings in the build menu, in this order.")]
+        [Tooltip("Build-bar categories, in this order.")]
+        [SerializeField] private List<BuildingCategory> categories = new List<BuildingCategory>();
+        [Tooltip("Buildable buildings. Each appears in its category's tray, in this order.")]
         [SerializeField] private List<BuildingData> buildings = new List<BuildingData>();
 
         [Header("Population")]
@@ -50,6 +52,10 @@ namespace Puzzle.Core
         [SerializeField, Min(0)] private int growthAmount = 1;
         [Tooltip("Needs every person has, e.g. Hunger. Each pays its own tax while met.")]
         [SerializeField] private List<NeedType> needs = new List<NeedType>();
+
+        [Header("Transport")]
+        [Tooltip("A house can take goods from a building at most this many road tiles away (roads touching either building).")]
+        [SerializeField, Min(1)] private int maxSupplyRoadDistance = 10;
 
         [Header("Taxes")]
         [Tooltip("The resource people pay taxes in.")]
@@ -68,12 +74,19 @@ namespace Puzzle.Core
 
         /// <summary>Resources in display order; Amount is the starting stock.</summary>
         public IReadOnlyList<ResourceAmount> Resources => resources;
+        public IReadOnlyList<BuildingCategory> Categories => categories;
         public IReadOnlyList<BuildingData> Buildings => buildings;
+
+        /// <summary>The buildings listed under a category, in Buildings order.</summary>
+        public List<BuildingData> BuildingsIn(BuildingCategory category) =>
+            buildings.FindAll(b => b != null && b.Category == category);
 
         public int StartingPopulation => startingPopulation;
         public int GrowthIntervalTicks => growthIntervalTicks;
         public int GrowthAmount => growthAmount;
         public IReadOnlyList<NeedType> Needs => needs;
+
+        public int MaxSupplyRoadDistance => maxSupplyRoadDistance;
 
         public ResourceType Money => money;
         public float IncomePerTickHoused => incomePerTickHoused;

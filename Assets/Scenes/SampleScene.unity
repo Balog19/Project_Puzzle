@@ -619,7 +619,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Puzzle.UI.GameHUD
   resourceCounterTemplate: {fileID: 9197481963319205126, guid: 8c09b334d08375a42b1bc38f3553373e, type: 3}
+  categoryButtonTemplate: {fileID: 9197481963319205126, guid: e7d5115088343aa4d8d9fc5a3fd8f56e, type: 3}
   buildButtonTemplate: {fileID: 9197481963319205126, guid: 26dcc818cfd3a2949a9c4f2e77b06170, type: 3}
+  buildingInfoTemplate: {fileID: 9197481963319205126, guid: 40953f4af763377468622663e0168879, type: 3}
   progressRowTemplate: {fileID: 9197481963319205126, guid: 27bc610856674524fbcd3d3e0ca23ce7, type: 3}
   infoRowTemplate: {fileID: 9197481963319205126, guid: 51d2dca4963b2e547872e7deda3f5ddf, type: 3}
   infoHeightAboveBuilding: 0.5

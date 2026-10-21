@@ -84,6 +84,17 @@ namespace Puzzle.Buildings
             return total;
         }
 
+        /// <summary>Every building with at least one cell inside the area, each listed once.</summary>
+        public List<Building> GetInArea(RectInt area)
+        {
+            var found = new List<Building>();
+            foreach (Vector2Int cell in area.allPositionsWithin)
+            {
+                if (TryGetAt(cell, out Building building) && !found.Contains(building)) found.Add(building);
+            }
+            return found;
+        }
+
         /// <summary>The building covering a cell, if any.</summary>
         public bool TryGetAt(Vector2Int cell, out Building building) =>
             _byCell.TryGetValue(cell, out building) && building != null;
@@ -93,15 +104,15 @@ namespace Puzzle.Buildings
         /// <summary>Pays for and places a building. Returns null if it can't be placed there.</summary>
         public Building Place(BuildingData data, RectInt area, Quaternion rotation)
         {
-            if (data == null || data.Prefab == null)
+            if (data == null)
             {
-                Debug.LogWarning("Can't place a building with no data or prefab.");
+                Debug.LogWarning("Can't place a building with no data.");
                 return null;
             }
 
             if (!IsAreaFree(area) || !_resources.TrySpend(data.Cost)) return null;
 
-            GameObject instance = UnityEngine.Object.Instantiate(data.Prefab, _grid.AreaToWorldCenter(area), rotation, _parent);
+            GameObject instance = Spawn(data, area, rotation);
             Building building = instance.AddComponent<Building>();
             building.Init(data, area);
 
@@ -113,7 +124,8 @@ namespace Puzzle.Buildings
 
             if (data.Produces)
             {
-                building.Producer = new Producer(_resources, data.ProductionPerTick);
+                building.Inventory = new Inventory();
+                building.Producer = new Producer(building.Inventory, data.ProductionPerTick);
                 _ticks.Register(building.Producer, TickPhase.Production);
             }
 
@@ -126,6 +138,20 @@ namespace Puzzle.Buildings
             _buildings.Add(building);
             Placed?.Invoke(building);
             return building;
+        }
+
+        // The prefab if there is one. Otherwise an empty object: roads get their piece from RoadSystem,
+        // other buildings get a placeholder box until a model is assigned.
+        private GameObject Spawn(BuildingData data, RectInt area, Quaternion rotation)
+        {
+            Vector3 position = _grid.AreaToWorldCenter(area);
+            if (data.Prefab != null) return UnityEngine.Object.Instantiate(data.Prefab, position, rotation, _parent);
+
+            var instance = new GameObject(data.DisplayName);
+            instance.transform.SetParent(_parent, false);
+            instance.transform.SetPositionAndRotation(position, Quaternion.identity);
+            if (!data.IsRoad) Placeholders.Building(data.Size, _grid.CellSize, instance.transform);
+            return instance;
         }
 
         /// <summary>Removes a building: stops its features, frees its cells and destroys it. No refund.</summary>

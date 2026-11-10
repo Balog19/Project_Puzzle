@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d8661e223a60046549dcff351d814289, type: 3}
+  m_Name: Water
+  m_EditorClassIdentifier: Assembly-CSharp::TileType
+  displayName: Water
+  color: {r: 0, g: 0.60158324, b: 1, a: 1}
+  tags: 8
+  buildable: 0
+  fertility: 1
+  resource: {fileID: 0}
+  resourceAmount: 0
+  decorations:
+    prefabs: []
+    spawnChance: 1
+    minCount: 1
+    maxCount: 3
+    scaleRange: {x: 0.8, y: 1.2}
+    edgePadding: 0.1
+    minSpacing: 0.25
+    randomYRotation: 1
+    thinAtEdges: 1
+  clearedVersion: {fileID: 0}

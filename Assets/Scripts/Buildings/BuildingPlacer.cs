@@ -15,6 +15,8 @@ public class BuildingPlacer : MonoBehaviour
     [Tooltip("Pays building costs. If empty, buildings are free.")]
     [SerializeField] private ResourceManager resources;
 
+    [Tooltip("land rules and efficiency. if empty, any empty cell is fine")]
+    [SerializeField] private TileMap tiles;
     public event Action<BuildingData> SelectionChanged;
 
     /// <summary>Raised after a building is placed: its data, the spawned instance, and the cells it covers.</summary>
@@ -23,6 +25,8 @@ public class BuildingPlacer : MonoBehaviour
     public BuildingData Selected { get; private set; }
     public bool IsPlacing => Selected != null;
 
+    public string InvalidReason { get; private set; } // why a current spot is invalid
+    public float PreviewEfficiency { get; private set; } // how good the land is
     private GameObject _ghost;
     private RectInt? _lastArea;
     private bool _lastValid;
@@ -58,6 +62,7 @@ public class BuildingPlacer : MonoBehaviour
 
         Selected = null;
         _lastArea = null;
+        InvalidReason = null;
         if (_ghost != null) Destroy(_ghost);
 
         if (visual != null)
@@ -84,9 +89,7 @@ public class BuildingPlacer : MonoBehaviour
         }
 
         RectInt? area = GetFootprintUnderMouse(mouse.position.ReadValue());
-        bool valid = area.HasValue
-                     && grid.IsAreaAll(area.Value, GridMap.CellState.Empty)
-                     && CanAffordSelected();
+        bool valid = EvaluatePlacement(area); //was occupancy + cost only, hannah changed
 
         UpdatePreview(area, valid);
 
@@ -94,6 +97,24 @@ public class BuildingPlacer : MonoBehaviour
         {
             Place(area.Value);
         }
+    }
+
+    private bool EvaluatePlacement(RectInt? area)
+    {
+        PreviewEfficiency = 0f;
+        if (!area.HasValue) { InvalidReason = null; return false; }
+        RectInt a = area.Value;
+        if (!grid.InBounds(a)) { InvalidReason = "outside the map"; return false; }
+        if (!grid.IsAreaAll(a, GridMap.CellState.Empty)) { InvalidReason = "space is taken"; return false; }
+        if (tiles != null && !tiles.CanPlace(Selected, a, out string reason))
+        {
+            InvalidReason = reason;
+            return false;
+        }
+        PreviewEfficiency = tiles != null ? tiles.GetEfficiency(Selected, a) : 1f;
+        if (!CanAffordSelected()) { InvalidReason = "not enough resources"; return false; }
+        InvalidReason = null;
+        return true;
     }
 
     private bool CanAffordSelected() => resources == null || resources.CanAfford(Selected.Cost);
@@ -104,7 +125,9 @@ public class BuildingPlacer : MonoBehaviour
 
         GameObject instance = Instantiate(Selected.Prefab, grid.AreaToWorldCenter(area), _ghost.transform.rotation);
         grid.SetArea(area, GridMap.CellState.Occupied);
-
+        float efficiency = tiles != null ? tiles.GetEfficiency(Selected, area) : 1f;
+        if (tiles != null) tiles.ApplyBuilding(Selected, area);
+        instance.AddComponent<LandEfficiency>().Init(Selected, efficiency);
         PlacedBuilding placed = instance.AddComponent<PlacedBuilding>();
         placed.Init(Selected, area);
         foreach (Vector2Int cell in area.allPositionsWithin)

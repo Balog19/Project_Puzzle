@@ -1,3 +1,4 @@
+using System;
 using System.Text;
 using TMPro;
 using UnityEngine;
@@ -11,6 +12,11 @@ using UnityEngine.InputSystem;
 // panel pivot should be top left (0, 1), raycast target turned off on the panel and text
 public class TileHoverInfo : MonoBehaviour
 {
+    public enum TooltipMode
+    {
+        AlwaysOn,
+        HoldKey
+    }
     [SerializeField] private TileMap tiles;
     [SerializeField] private BuildingPlacer placer;
     [Tooltip("defaults to Camera.main.")]
@@ -19,10 +25,57 @@ public class TileHoverInfo : MonoBehaviour
     [SerializeField] private TMP_Text text;
     [SerializeField] private Vector2 offset = new Vector2(18f, -18f);
 
+    [Header("When to show")]
+    [SerializeField] private TooltipMode mode = TooltipMode.HoldKey;
+    [Tooltip("key to hold when mode is Hold Key")]
+    [SerializeField] private Key holdKey = Key.LeftShift;
+    [Tooltip("pressing this in game switches between Always On and Hold Key. none = no switching key")]
+    [SerializeField] private Key switchModeKey = Key.None;
+    [Tooltip("always show while placing a building, so the player can see why a spot is invalid")]
+    [SerializeField] private bool alwaysShowWhilePlacing = true;
+    [Tooltip("eemember the player's chosen mode between play sessions")]
+    [SerializeField] private bool rememberMode = true;
+    private const string ModePrefKey = "TileHoverInfo.Mode";
+    public event Action<TooltipMode> ModeChanged;
+    public TooltipMode Mode => mode;
     private readonly StringBuilder _sb = new StringBuilder();
 
+    private void Awake()
+    {
+        if (rememberMode && PlayerPrefs.HasKey(ModePrefKey))
+            mode = (TooltipMode)PlayerPrefs.GetInt(ModePrefKey);
+    }
+
+    public void SetMode(TooltipMode newMode)
+    {
+        mode = newMode;
+        if (rememberMode) PlayerPrefs.SetInt(ModePrefKey, (int)mode);
+        ModeChanged?.Invoke(mode);
+    }
+
+    public void ToggleMode() =>
+        SetMode(mode == TooltipMode.AlwaysOn ? TooltipMode.HoldKey : TooltipMode.AlwaysOn);
+
+    // ticked = always on
+    public void SetAlwaysOn(bool alwaysOn) =>
+        SetMode(alwaysOn ? TooltipMode.AlwaysOn : TooltipMode.HoldKey);
+
+    private bool ShouldShow(Keyboard keyboard)
+    {
+        if (mode == TooltipMode.AlwaysOn) return true;
+        if (alwaysShowWhilePlacing && placer != null && placer.IsPlacing) return true;
+        return keyboard != null && holdKey != Key.None && keyboard[holdKey].isPressed;
+    }
     private void Update()
     {
+        Keyboard keyboard = Keyboard.current;
+        if (keyboard != null && switchModeKey != Key.None && keyboard[switchModeKey].wasPressedThisFrame)
+            ToggleMode();
+        if (!ShouldShow(keyboard))
+        {
+            Hide();
+            return;
+        }
         Mouse mouse = Mouse.current;
         if (mouse == null || tiles == null || !tiles.IsReady || IsPointerOverUI() ||
             !TryGetMouseCell(mouse.position.ReadValue(), out Vector2Int cell))

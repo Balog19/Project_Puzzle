@@ -1423,6 +1423,11 @@ MonoBehaviour:
   panel: {fileID: 1899819838}
   text: {fileID: 748162040}
   offset: {x: 18, y: -18}
+  mode: 1
+  holdKey: 51
+  switchModeKey: 21
+  alwaysShowWhilePlacing: 1
+  rememberMode: 1
 --- !u!1 &832575517
 GameObject:
   m_ObjectHideFlags: 0
@@ -2850,6 +2855,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 962d1631eba9d42998de8af6848be6c9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TerrainGenerator
+  level: {fileID: 11400000, guid: 54a65cc6fc59a4420b03ababa17035fa, type: 2}
   levelMap: {fileID: 0}
   colorMappings: []
   colorTolerance: 0.1

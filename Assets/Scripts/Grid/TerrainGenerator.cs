@@ -33,8 +33,15 @@ public class TerrainGenerator : MonoBehaviour
         public TileTag extraTags;
     }
 
+    [Header("Painted level (Level Painter)")]
+    [Tooltip("if set, this level is loaded exactly as painted instead of generating terrain")]
+    [SerializeField] private LevelData level;
+
+    public LevelData Level { get => level; set => level = value; }
+    public TileType Fallback => fallback;
+
     [Header("custom level (optional)")]
-    [Tooltip("import with read/write on, compression None, filter point!!! 1 pixel = 1 cell (stretched to fit)")]
+    [Tooltip("import with read/write on, compression None, filter point. 1 pixel = 1 cell (stretched to fit)")]
     [SerializeField] private Texture2D levelMap;
     [SerializeField] private ColorMapping[] colorMappings;
     [SerializeField, Range(0f, 0.5f)] private float colorTolerance = 0.1f;
@@ -54,9 +61,19 @@ public class TerrainGenerator : MonoBehaviour
     private static readonly Vector2Int[] Neighbours =
         { Vector2Int.up, Vector2Int.down, Vector2Int.left, Vector2Int.right };
     // fills in both arrays and indexed y * width + x
-    public void Generate(int width, int height, TileType[] types, TileTag[] extraTags)
-    {
+    public void Generate(int width, int height, TileType[] types, TileTag[] extraTags, bool ignoreLevel = false)    {
         if (fallback == null) Debug.LogError("TerrainGenerator: assign a Fallback tile", this);
+        if (!ignoreLevel && level != null)                                          
+        {                                                                           
+            if (level.Matches(width, height))                                       
+            {                                                                       
+                level.CopyTo(types, extraTags, fallback);                          
+                TagShores(width, height, types, extraTags);                        
+                return;                                                             
+            }                                                                       
+            Debug.LogWarning($"TerrainGenerator: level '{level.name}' is {level.Width}x{level.Height} but the grid is {width}x{height}. generating terrain instead", this);
+        }                                                                           
+        
         if (randomizeSeed) seed = UnityEngine.Random.Range(int.MinValue, int.MaxValue);
 
         var rng = new System.Random(seed);
